@@ -67,7 +67,7 @@ with tf.Session() as sess:
               _, loss = sess.run([train_op, cpc.loss])
               step += 1
               if step % 1000 == 0:
-                  print(f'loss: {loss}, step: {step}/{total}')
+                  print('loss: ', loss, 'step:', step, '/', total)
           except tf.errors.OutOfRangeError:
               break
 
