@@ -4,8 +4,10 @@ from tensorflow import keras
 from model import CPC
 from nets.resnet_v2 import resnet_v2_101 as resnet
 
+mode = 'train'
 learn_rate = 2e-4
-batch_size = 32
+batch_size = 4
+is_train = True
 
 def image_preprocess(x):
     x = tf.expand_dims(x, axis=-1)
@@ -20,7 +22,11 @@ def chunks(l, n):
 # load data
 fashion_mnist = keras.datasets.fashion_mnist
 (train_images, train_labels), (test_images, test_labels) = fashion_mnist.load_data()
-batches = tf.data.Dataset.from_tensor_slices(train_images).batch(batch_size)
+if mode == 'train' or mode == 'validation':
+    batches = tf.data.Dataset.from_tensor_slices(train_images).batch(batch_size)
+elif mode == 'infer':
+    batches = tf.data.Dataset.from_tensor_slices(test_images).batch(batch_size)
+
 iterator = batches.make_one_shot_iterator()
 items = iterator.get_next()
 data = image_preprocess(items)
@@ -39,17 +45,26 @@ X_len = tf.constant(X_len, dtype=tf.int32)
 cpc = CPC(X, X_len, Y)
 train_op = tf.train.AdamOptimizer(learn_rate).minimize(cpc.loss)
 
+saver = tf.train.Saver()
+
 # tensorflow
 with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
+    if mode == 'train':
+        sess.run(tf.global_variables_initializer())
 
-    step = 0
+        step = 0
+        total = len(train_images) / batch_size
 
-    while True:
-        try:
-            _, loss = sess.run([train_op, cpc.loss])
-            step += 1
-            if step % 1000 == 0:
-                print(loss)
-        except tf.errors.OutOfRangeError:
-            break
+        while True:
+          try:
+              _, loss = sess.run([train_op, cpc.loss])
+              step += 1
+              if step % 1000 == 0:
+                  print(f'loss: {loss}, step: {step}/{total}')
+          except tf.errors.OutOfRangeError:
+              break
+
+        saver.save(sess, 'model.ckpt')
+
+    elif mode == 'infer':
+        saver.save(sess, 'model_infer.ckpt')
