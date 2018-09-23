@@ -4,10 +4,17 @@ from tensorflow import keras
 from model import CPC
 from nets.resnet_v2 import resnet_v2_101 as resnet
 
-mode = 'train'
-learn_rate = 2e-4
-batch_size = 4
-is_train = True
+tf.app.flags.DEFINE_string('mode', 'train', 'mode')
+tf.app.flags.DEFINE_integer('epochs', 4, 'epochs')
+tf.app.flags.DEFINE_integer('batch_size', 6, 'batch size to train in one step')
+tf.app.flags.DEFINE_float('learn_rate', 2e-4, 'learn rate for training optimization')
+
+FLAGS = tf.app.flags.FLAGS
+
+mode = FLAGS.mode
+epochs = FLAGS.epochs
+learn_rate = FLAGS.learn_rate
+batch_size = FLAGS.batch_size
 
 def image_preprocess(x):
     x = tf.expand_dims(x, axis=-1)
@@ -23,9 +30,9 @@ def chunks(l, n):
 fashion_mnist = keras.datasets.fashion_mnist
 (train_images, train_labels), (test_images, test_labels) = fashion_mnist.load_data()
 if mode == 'train' or mode == 'validation':
-    batches = tf.data.Dataset.from_tensor_slices(train_images).batch(batch_size)
+    batches = tf.data.Dataset.from_tensor_slices(train_images).repeat(epochs).batch(batch_size)
 elif mode == 'infer':
-    batches = tf.data.Dataset.from_tensor_slices(test_images).batch(batch_size)
+    batches = tf.data.Dataset.from_tensor_slices(test_images).repeat(epochs).batch(batch_size)
 
 iterator = batches.make_one_shot_iterator()
 items = iterator.get_next()
@@ -53,7 +60,7 @@ with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
 
         step = 0
-        total = len(train_images) / batch_size
+        total = int((len(train_images) * epochs) / batch_size)
 
         while True:
           try:
