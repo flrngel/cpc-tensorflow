@@ -42,8 +42,14 @@ train_op = tf.train.AdamOptimizer(learn_rate).minimize(cpc.loss)
 # tensorflow
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
-    #sess.run(di.initializer)
 
-    print(sess.run(data).shape)
+    step = 0
 
-    _, loss = sess.run([train_op, cpc.loss])
+    while True:
+        try:
+            _, loss = sess.run([train_op, cpc.loss])
+            step += 1
+            if step % 1000 == 0:
+                print(loss)
+        except tf.errors.OutOfRangeError:
+            break
