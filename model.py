@@ -50,13 +50,16 @@ class CPC():
             with tf.variable_scope('coding'):
                 predict = []
                 losses = []
-                y = tf.reshape(self.Y, [self.batch_size, self.k, self.code,  self.code_dim])
+                y = self.Y
+                #y = tf.reshape(self.Y, [self.batch_size, self.k, self.code,  self.code_dim])
                 #y = tf.reshape(self.Y, [self.batch_size, self.k * self.code * self.code_dim])
                 for i in range(k):
                     W = tf.get_variable('x_t_'+str(i+1), shape=[cell_dimension, self.code * self.code_dim])
                     y_ = tf.reshape(y[:, i, :, :], [self.batch_size, self.code * self.code_dim])
+                    self.probs2 = y[0, i, :, 0]
 
                     cpc = tf.map_fn(lambda x: tf.squeeze(tf.transpose(W) @ tf.expand_dims(x, -1), axis=-1), c_t) * y_
+                    self.cpc = cpc
                     #cpc = tf.reshape(cpc, [self.batch_size, self.code, self.code_dim])
                     cpc = tf.reduce_mean(tf.sigmoid(cpc), axis=-1)
                     #cpc = tf.sigmoid(cpc)
@@ -74,7 +77,7 @@ class CPC():
                 #self.probs = tf.reduce_mean(predict, name='probs', axis=[2,1])
                 #self.probs2 = probs2 = tf.reduce_mean(predict, name='probs', axis=2)
                 #self.probs = tf.sigmoid(tf.reduce_mean(probs2, axis=[1]))
-                self.probs2 = predict#c_t[:, 0:5]#tf.reduce_mean(c_t, axis=-1)
+                #c_t[:, 0:5]#tf.reduce_mean(c_t, axis=-1)
                 #self.loss = tf.keras.losses.binary_crossentropy(self.Y_label, self.probs)
                 self.loss = tf.reduce_mean(losses)
                 #self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=self.Y_label, logits=self.probs))

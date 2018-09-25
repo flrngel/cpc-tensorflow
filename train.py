@@ -27,12 +27,17 @@ def chunks(l, n):
         yield l[i:i+n]
 
 # load data
-fashion_mnist = keras.datasets.fashion_mnist
+fashion_mnist = keras.datasets.mnist
 (train_images, train_labels), (test_images, test_labels) = fashion_mnist.load_data()
-if mode == 'train' or mode == 'validation':
+if mode == 'train':
     batches = tf.data.Dataset.from_tensor_slices(train_images).repeat(epochs).shuffle(100,
             reshuffle_each_iteration=True).batch(batch_size)
+    is_training=True
+elif mode == 'validation':
+    batches = tf.data.Dataset.from_tensor_slices(train_images).repeat(epochs).batch(batch_size)
+    is_training=False
 elif mode == 'infer':
+    is_training=False
     batches = tf.data.Dataset.from_tensor_slices(test_images).repeat(epochs).shuffle(100,
             reshuffle_each_iteration=True).batch(batch_size)
 
@@ -42,20 +47,26 @@ data = image_preprocess(items)
 
 # build graph
 ## resnet
-_, features = resnet(data, is_training=True)
+_, features = resnet(data, is_training=is_training)
 features = features['resnet_v2_101/block3']
 features = tf.reshape(features, shape=[batch_size, 7, 7, 1024])
 #X = tf.reshape(features, shape=[batch_size, 7, 7*1024])
 X = tf.reshape(features[:, :5, :, :], shape=[batch_size, 5, 7*1024])
+nr = tf.random_shuffle(tf.constant(list(range(batch_size)), dtype=tf.int32))
+nrr = tf.random_shuffle(tf.constant(list(range(5)), dtype=tf.int32))
+nrri = tf.constant([0, 1])
 #Y = features[:, -2:, :, :]
 
 Y = []
 for i in range(batch_size):
     if i == 0:
-        Y.append(features[0, -2:, :, :])
+        Y.append(tf.expand_dims(features[0, -2:, :, :], axis=0))
     else:
-        Y.append(tf.concat([tf.expand_dims(features[i, np.random.choice(5), :, :], axis=0), tf.expand_dims(features[i, np.random.choice(5), :, :], axis=0)], axis=0))
+        Y.append(tf.expand_dims(tf.gather(features[i], tf.gather(nrr, nrri)), axis=0))
+        #Y.append(tf.expand_dims(tf.concat([tf.expand_dims(features[i, np.random.choice(5), :, :], axis=0), tf.expand_dims(features[i, np.random.choice(5), :, :], axis=0)], axis=0), axis=0))
+print(Y)
 Y = tf.concat(Y, axis=0)
+print(Y)
 #Y_distortion = np.random.uniform(0.75, 1.25, (batch_size, 2, 7, 1024))
 #Y_distortion[0].fill(1.)
 #Y_distortion = tf.constant(Y_distortion, dtype=tf.float32)
@@ -64,6 +75,12 @@ Y = tf.concat(Y, axis=0)
 Y_label = np.zeros((batch_size), dtype=np.float32)
 Y_label[0] = 1
 Y_label = tf.constant(Y_label, dtype=np.float32)
+
+print(nr)
+X = tf.gather(X, nr)
+Y_label = tf.gather(Y_label, nr)
+Y = tf.gather(Y, nr)
+print(Y)
 
 ## cpc
 X_len = [5] * batch_size
@@ -85,6 +102,8 @@ with tf.Session() as sess:
 
         while True:
             try:
+                #print(sess.run([Y_label]))
+                #sess.run([nr, nrr])
                 _, loss, g, gg, _, ggg = sess.run([train_op, cpc.loss, cpc.c_t_debug, cpc.x_debug, items, cpc.probs2])
                 if step % 100 == 0:
                     print(g, gg, ggg)
