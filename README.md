@@ -14,7 +14,7 @@ Tensorflow implementation of **Representation Learning with Contrastive Predicti
 
 training code is very messy right now. there is hard codes.. WIP
 
-I just tested vision part but `model.py` was intend to adopt various domain.
+I just tested vision part but `model.py` is intend to adopt various domain.
 
 ## References
 - [davidtellez/contrastive-predictive-coding](https://github.com/davidtellez/contrastive-predictive-coding)
