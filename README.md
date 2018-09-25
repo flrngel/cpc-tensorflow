@@ -4,6 +4,9 @@
 
 Tensorflow implementation of **Representation Learning with Contrastive Predictive Coding**
 
+- [Paper](https://arxiv.org/abs/1807.03748)
+- [My Notes](https://github.com/flrngel/understanding-ai/issues/24)
+
 ## Features
 - Resnet101
 
@@ -12,3 +15,6 @@ Tensorflow implementation of **Representation Learning with Contrastive Predicti
 training code is very messy right now. there is hard codes.. WIP
 
 I just tested vision part but `model.py` was intend to adopt various domain.
+
+## References
+- [davidtellez/contrastive-predictive-coding](https://github.com/davidtellez/contrastive-predictive-coding)
