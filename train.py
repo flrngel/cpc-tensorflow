@@ -32,12 +32,9 @@ fashion_mnist = keras.datasets.mnist
 if mode == 'train':
     batches = tf.data.Dataset.from_tensor_slices(train_images).repeat(epochs).shuffle(100,
             reshuffle_each_iteration=True).batch(batch_size)
-    is_training=True
 elif mode == 'validation':
     batches = tf.data.Dataset.from_tensor_slices(train_images).repeat(epochs).batch(batch_size)
-    is_training=False
 elif mode == 'infer':
-    is_training=False
     batches = tf.data.Dataset.from_tensor_slices(test_images).repeat(epochs).shuffle(100,
             reshuffle_each_iteration=True).batch(batch_size)
 
@@ -47,7 +44,7 @@ data = image_preprocess(items)
 
 # build graph
 ## resnet
-_, features = resnet(data, is_training=is_training)
+_, features = resnet(data)
 features = features['resnet_v2_101/block3']
 features = tf.reshape(features, shape=[batch_size, 7, 7, 1024])
 #X = tf.reshape(features, shape=[batch_size, 7, 7*1024])
@@ -99,15 +96,17 @@ with tf.Session() as sess:
 
         step = 0
         total = int((len(train_images) * epochs) / batch_size)
+        
+        features = tf.reshape(features, shape=[batch_size, 7 * 7 * 1024])
+        debug = tf.reduce_mean(features)
 
         while True:
             try:
                 #print(sess.run([Y_label]))
                 #sess.run([nr, nrr])
-                _, loss, g, gg, _, ggg = sess.run([train_op, cpc.loss, cpc.c_t_debug, cpc.x_debug, items, cpc.probs2])
+                _, loss, g, gg, _, ggg, db = sess.run([train_op, cpc.loss, cpc.c_t_debug, cpc.x_debug, items, cpc.probs2, debug])
                 if step % 100 == 0:
-                    print(g, gg, ggg)
-                if step % 100 == 0:
+                    print(g, gg, db, ggg)
                     print('loss: ', loss, 'step:', step, '/', total)
                 step += 1
             except tf.errors.OutOfRangeError:
@@ -116,23 +115,28 @@ with tf.Session() as sess:
         saver.save(sess, './model.ckpt')
 
     elif mode == 'validation':
-        features = tf.reshape(features, shape=[batch_size, 7 * 7 * 1024])
-        out = tf.layers.dense(features, 10)
-        labels = tf.placeholder(tf.int32, shape=[batch_size])
-        labels_onehot = tf.one_hot(labels, depth=10)
-        loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=out, labels=labels_onehot))
-        train_op = tf.train.AdamOptimizer(learn_rate).minimize(loss)
+        with tf.variable_scope('validation'):
+            features = tf.reshape(features, shape=[batch_size, 7 * 7 * 1024])
+            out = tf.layers.dense(features, 10)
+            labels = tf.placeholder(tf.int32, shape=[batch_size])
+            labels_onehot = tf.one_hot(labels, depth=10)
+            loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=out, labels=labels_onehot))
+            train_op = tf.train.AdamOptimizer(learn_rate).minimize(loss, var_list=[tf.trainable_variables(scope='validation')])
         i=0
         sess.run(tf.global_variables_initializer())
         sess.run(iterator.initializer)
         saver.restore(sess, './model.ckpt')
         s = 0
+
+        debug = tf.reduce_mean(features)
         while True:
             try:
-                _, _loss, _out, _ = sess.run([train_op, loss, out, items], feed_dict={labels: train_labels[i*batch_size:(i+1)*batch_size]})
+                _, _loss, _out, _, _features = sess.run([train_op, loss, out, items, debug], feed_dict={labels: train_labels[i*batch_size:(i+1)*batch_size]})
                 s += np.sum(np.argmax(_out, axis=1) == train_labels[i*batch_size:(i+1)*batch_size])
+                #print(_features)
                 if i % 100 == 0:
                     print(_loss, s/(batch_size*100))
+                    #print(_features)
                     s=0
                 if i % 1000 == 0:
                     print(np.argmax(_out, axis=1), train_labels[i*batch_size:(i+1)*batch_size])
