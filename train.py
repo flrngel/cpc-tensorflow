@@ -47,11 +47,15 @@ data = image_preprocess(items)
 _, features = resnet(data)
 features = features['resnet_v2_101/block3']
 features = tf.reshape(features, shape=[batch_size, 7, 7, 1024])
-#X = tf.reshape(features, shape=[batch_size, 7, 7*1024])
-X = tf.reshape(features[:, :5, :, :], shape=[batch_size, 5, 7*1024])
+X = tf.reshape(features, shape=[batch_size, 7, 7*1024])
+#X = tf.reshape(features[:, :5, :, :], shape=[batch_size, 5, 7*1024])
 nr = tf.random_shuffle(tf.constant(list(range(batch_size)), dtype=tf.int32))
-nrr = tf.random_shuffle(tf.constant(list(range(5)), dtype=tf.int32))
-nrri = tf.constant([0, 1])
+nl1 = tf.constant(list(range(5)) + [6], dtype=tf.int32)
+nl2 = tf.constant(list(range(5)) + [5], dtype=tf.int32)
+nrr1 = [tf.random_shuffle(nl1) for i in range(batch_size)]
+nrr2 = [tf.random_shuffle(nl2) for i in range(batch_size)]
+#nrri = tf.constant([0, 1])
+nrri = [tf.stack([nrr1[i][0], nrr2[i][0]], axis=0) for i in range(batch_size)]
 #Y = features[:, -2:, :, :]
 
 Y = []
@@ -59,7 +63,7 @@ for i in range(batch_size):
     if i == 0:
         Y.append(tf.expand_dims(features[0, -2:, :, :], axis=0))
     else:
-        Y.append(tf.expand_dims(tf.gather(features[i], tf.gather(nrr, nrri)), axis=0))
+        Y.append(tf.expand_dims(tf.gather(features[i], nrri[i]), axis=0))
         #Y.append(tf.expand_dims(tf.concat([tf.expand_dims(features[i, np.random.choice(5), :, :], axis=0), tf.expand_dims(features[i, np.random.choice(5), :, :], axis=0)], axis=0), axis=0))
 print(Y)
 Y = tf.concat(Y, axis=0)
@@ -106,7 +110,7 @@ with tf.Session() as sess:
                 #sess.run([nr, nrr])
                 _, loss, g, gg, _, ggg, db = sess.run([train_op, cpc.loss, cpc.c_t_debug, cpc.x_debug, items, cpc.probs2, debug])
                 if step % 100 == 0:
-                    print(g, gg, db, ggg)
+                    print(g, gg, db)
                     print('loss: ', loss, 'step:', step, '/', total)
                 step += 1
             except tf.errors.OutOfRangeError:

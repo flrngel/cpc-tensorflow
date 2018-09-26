@@ -38,11 +38,13 @@ class CPC():
 
             # Autoregressive model
             with tf.variable_scope('g_ar'):
-                _, c_t = tf.nn.dynamic_rnn(cell, self.X, initial_state=initial_state)
+                #_, c_t = tf.nn.dynamic_rnn(cell, self.X, initial_state=initial_state)
+                _, c_t = tf.nn.dynamic_rnn(cell, self.X, sequence_length=self.X_len, initial_state=initial_state)
                 #_, c_t = tf.nn.dynamic_rnn(cell, self.X, sequence_length=self.X_len, initial_state=initial_state)
                 #c_t = c_t[:, 4, :]
                 #c_t = tf.squeeze(c_t, axis=1)
                 #raise '18188'
+                self.c_t = c_t
                 self.c_t_debug = tf.reduce_mean(c_t)
             self.x_debug = tf.reduce_mean(X)
             print(c_t)
