@@ -19,7 +19,12 @@ batch_size = FLAGS.batch_size
 def image_preprocess(x):
     x = tf.expand_dims(x, axis=-1)
     x = tf.concat([x, x, x], axis=-1)
-    x = tf.image.resize_images(x, (224, 224))
+    x = tf.image.resize_images(x, (256, 256))
+    arr = []
+    for i in range(7):
+        for j in range(7):
+            arr.append(x[:, i*32:i*32+64, j*32:j*32+64, :])
+    x = tf.concat(arr, axis=0)
     return x
 
 def chunks(l, n):
@@ -27,7 +32,7 @@ def chunks(l, n):
         yield l[i:i+n]
 
 # load data
-fashion_mnist = keras.datasets.mnist
+fashion_mnist = keras.datasets.fashion_mnist
 (train_images, train_labels), (test_images, test_labels) = fashion_mnist.load_data()
 if mode == 'train':
     batches = tf.data.Dataset.from_tensor_slices(train_images).repeat(epochs).shuffle(100,
@@ -43,10 +48,14 @@ items = iterator.get_next()
 data = image_preprocess(items)
 
 # build graph
-## resnet
+## resnet encoding
 _, features = resnet(data)
 features = features['resnet_v2_101/block3']
+
+# mean pooling
+features = tf.reduce_mean(features, axis=[1,2])
 features = tf.reshape(features, shape=[batch_size, 7, 7, 1024])
+
 X = tf.reshape(features, shape=[batch_size, 7, 7*1024])
 #X = tf.reshape(features[:, :5, :, :], shape=[batch_size, 5, 7*1024])
 nr = tf.random_shuffle(tf.constant(list(range(batch_size)), dtype=tf.int32))
