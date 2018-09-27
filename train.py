@@ -25,6 +25,7 @@ def image_preprocess(x):
         for j in range(7):
             arr.append(x[:, i*32:i*32+64, j*32:j*32+64, :])
     x = tf.concat(arr, axis=0)
+    #x = tf.image.resize_images(x, (224, 224))
     return x
 
 def chunks(l, n):
