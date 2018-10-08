@@ -8,6 +8,7 @@ tf.app.flags.DEFINE_string('mode', 'train', 'mode')
 tf.app.flags.DEFINE_integer('epochs', 20, 'epochs')
 tf.app.flags.DEFINE_integer('batch_size', 30, 'batch size to train in one step')
 tf.app.flags.DEFINE_float('learn_rate', 2e-4, 'learn rate for training optimization')
+tf.app.flags.DEFINE_integer('K', 2, 'hyperparameter K')
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -15,6 +16,8 @@ mode = FLAGS.mode
 epochs = FLAGS.epochs
 learn_rate = FLAGS.learn_rate
 batch_size = FLAGS.batch_size
+K = FLAGS.K
+n = 7
 
 def image_preprocess(x):
     x = tf.expand_dims(x, axis=-1)
@@ -54,50 +57,50 @@ _, features = resnet(data)
 features = features['resnet_v2_101/block3']
 
 # mean pooling
-features = tf.reduce_mean(features, axis=[1,2])
+features = tf.reduce_mean(features, axis=[1, 2])
 features = tf.reshape(features, shape=[batch_size, 7, 7, 1024])
 
-X = tf.reshape(features, shape=[batch_size, 7, 7*1024])
-#X = tf.reshape(features[:, :5, :, :], shape=[batch_size, 5, 7*1024])
-nr = tf.random_shuffle(tf.constant(list(range(batch_size)), dtype=tf.int32))
-nl1 = tf.constant(list(range(5)) + [6], dtype=tf.int32)
-nl2 = tf.constant(list(range(5)) + [5], dtype=tf.int32)
-nrr1 = [tf.random_shuffle(nl1) for i in range(batch_size)]
-nrr2 = [tf.random_shuffle(nl2) for i in range(batch_size)]
-#nrri = tf.constant([0, 1])
-nrri = [tf.stack([nrr1[i][0], nrr2[i][0]], axis=0) for i in range(batch_size)]
-#Y = features[:, -2:, :, :]
+X = tf.reshape(features, shape=[batch_size, 7, 7, 1024])
+X = tf.transpose(X, perm=[0, 2, 1, 3])
+batch_size *= n
+X = tf.reshape(X, shape=[batch_size, 7, 1024])
+
+# for random row
+nl = []
+nrr = []
+nrri = []
+for i in range(K):
+    nlist = np.arange(0, n)
+    nlist = nlist[nlist != (n-K+i)]
+    nl.append(tf.constant(nlist))
+    nrr.append([tf.random_shuffle(nl[i]) for j in range(batch_size)])
+nrri = [tf.stack([nrr[j][i][0] for j in range(K)], axis=0) for i in range(batch_size)]
 
 Y = []
+n_p = batch_size // 2
+
 for i in range(batch_size):
-    if i == 0:
-        Y.append(tf.expand_dims(features[0, -2:, :, :], axis=0))
+    if i <= n_p:
+        Y.append(tf.expand_dims(features[int(i/n), -K:, i%n, :], axis=0))
     else:
-        Y.append(tf.expand_dims(tf.gather(features[i], nrri[i]), axis=0))
-        #Y.append(tf.expand_dims(tf.concat([tf.expand_dims(features[i, np.random.choice(5), :, :], axis=0), tf.expand_dims(features[i, np.random.choice(5), :, :], axis=0)], axis=0), axis=0))
-print(Y)
+        Y.append(tf.expand_dims(tf.gather(features[int(i/n)], nrri[i])[:, i%n, :], axis=0))
+
 Y = tf.concat(Y, axis=0)
 print(Y)
-#Y_distortion = np.random.uniform(0.75, 1.25, (batch_size, 2, 7, 1024))
-#Y_distortion[0].fill(1.)
-#Y_distortion = tf.constant(Y_distortion, dtype=tf.float32)
-#Y = Y * Y_distortion
-
 Y_label = np.zeros((batch_size), dtype=np.float32)
 Y_label[0] = 1
 Y_label = tf.constant(Y_label, dtype=np.float32)
 
-print(nr)
+nr = tf.random_shuffle(tf.constant(list(range(batch_size)), dtype=tf.int32))
 X = tf.gather(X, nr)
 Y_label = tf.gather(Y_label, nr)
 Y = tf.gather(Y, nr)
-print(Y)
 
 ## cpc
 X_len = [5] * batch_size
 X_len = tf.constant(X_len, dtype=tf.int32)
 
-cpc = CPC(X, X_len, Y, Y_label)
+cpc = CPC(X, X_len, Y, Y_label, k=K)
 train_op = tf.train.AdamOptimizer(learn_rate).minimize(cpc.loss)
 
 saver = tf.train.Saver()

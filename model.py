@@ -56,9 +56,9 @@ class CPC():
                 #y = tf.reshape(self.Y, [self.batch_size, self.k, self.code,  self.code_dim])
                 #y = tf.reshape(self.Y, [self.batch_size, self.k * self.code * self.code_dim])
                 for i in range(k):
-                    W = tf.get_variable('x_t_'+str(i+1), shape=[cell_dimension, self.code * self.code_dim])
-                    y_ = tf.reshape(y[:, i, :, :], [self.batch_size, self.code * self.code_dim])
-                    self.probs2 = y[0, i, :, 0]
+                    W = tf.get_variable('x_t_'+str(i+1), shape=[cell_dimension, self.code_dim])
+                    y_ = tf.reshape(y[:, i, :], [self.batch_size, self.code_dim])
+                    self.probs2 = y[0, i, 0]
 
                     cpc = tf.map_fn(lambda x: tf.squeeze(tf.transpose(W) @ tf.expand_dims(x, -1), axis=-1), c_t) * y_
                     self.cpc = cpc
