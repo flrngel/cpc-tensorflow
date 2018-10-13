@@ -62,8 +62,13 @@ features = tf.reshape(features, shape=[batch_size, 7, 7, 1024])
 
 X = tf.reshape(features, shape=[batch_size, 7, 7, 1024])
 X = tf.transpose(X, perm=[0, 2, 1, 3])
+tmp = []
+for i in range(batch_size):
+    for j in range(n):
+        tmp.append(X[i][j])
+X = tf.stack(tmp, 0)
 batch_size *= n
-X = tf.reshape(X, shape=[batch_size, 7, 1024])
+#X = tf.reshape(X, shape=[batch_size, 7, 1024])
 
 # for random row
 nl = []
@@ -77,24 +82,24 @@ for i in range(K):
 nrri = [tf.stack([nrr[j][i][0] for j in range(K)], axis=0) for i in range(batch_size)]
 
 Y = []
+Y_label = np.zeros((batch_size), dtype=np.float32)
 n_p = batch_size // 2
 
 for i in range(batch_size):
     if i <= n_p:
         Y.append(tf.expand_dims(features[int(i/n), -K:, i%n, :], axis=0))
+        Y_label[i] = 1
     else:
         Y.append(tf.expand_dims(tf.gather(features[int(i/n)], nrri[i])[:, i%n, :], axis=0))
 
 Y = tf.concat(Y, axis=0)
 print(Y)
-Y_label = np.zeros((batch_size), dtype=np.float32)
-Y_label[0] = 1
 Y_label = tf.constant(Y_label, dtype=np.float32)
 
 nr = tf.random_shuffle(tf.constant(list(range(batch_size)), dtype=tf.int32))
-X = tf.gather(X, nr)
-Y_label = tf.gather(Y_label, nr)
-Y = tf.gather(Y, nr)
+#X = tf.gather(X, nr)
+#Y_label = tf.gather(Y_label, nr)
+#Y = tf.gather(Y, nr)
 
 ## cpc
 X_len = [5] * batch_size
@@ -112,18 +117,15 @@ with tf.Session() as sess:
         sess.run(iterator.initializer)
 
         step = 0
-        total = int((len(train_images) * epochs) / batch_size)
+        total = int((len(train_images) * epochs * n) / batch_size)
         
-        features = tf.reshape(features, shape=[batch_size, 7 * 7 * 1024])
-        debug = tf.reduce_mean(features)
-
         while True:
             try:
                 #print(sess.run([Y_label]))
                 #sess.run([nr, nrr])
-                _, loss, g, gg, _, ggg, db = sess.run([train_op, cpc.loss, cpc.c_t_debug, cpc.x_debug, items, cpc.probs2, debug])
+                _, loss, g, gg, _, ggg, gggg = sess.run([train_op, cpc.loss, cpc.c_t_debug, cpc.x_debug, items, cpc.probs2, cpc.cpc])
                 if step % 100 == 0:
-                    print(g, gg, db)
+                    print(g, gg, gggg)
                     print('loss: ', loss, 'step:', step, '/', total)
                 step += 1
             except tf.errors.OutOfRangeError:
@@ -133,6 +135,7 @@ with tf.Session() as sess:
 
     elif mode == 'validation':
         with tf.variable_scope('validation'):
+            batch_size = int(batch_size / n)
             features = tf.reshape(features, shape=[batch_size, 7 * 7 * 1024])
             out = tf.layers.dense(features, 10)
             labels = tf.placeholder(tf.int32, shape=[batch_size])
@@ -158,6 +161,8 @@ with tf.Session() as sess:
                 if i % 1000 == 0:
                     print(np.argmax(_out, axis=1), train_labels[i*batch_size:(i+1)*batch_size])
                 i+=1
+                if len(train_images)//batch_size <= i:
+                    i=0
             except tf.errors.OutOfRangeError:
                 break
 
