@@ -1,8 +1,5 @@
 # CPC-Tensorflow (Contrastive Predictive Coding)
 
-![cpc vision model](https://raw.githubusercontent.com/flrngel/cpc-tensorflow/master/resources/cpc-vision.png)
-![cpc explanation](https://raw.githubusercontent.com/flrngel/cpc-tensorflow/master/resources/cpc-explanation1.png)
-
 Tensorflow implementation of **Representation Learning with Contrastive Predictive Coding**
 
 - [Paper](https://arxiv.org/abs/1807.03748)
@@ -11,11 +8,16 @@ Tensorflow implementation of **Representation Learning with Contrastive Predicti
 ## Features
 - Resnet101
 
+## Explanations
+
+![cpc vision model](https://raw.githubusercontent.com/flrngel/cpc-tensorflow/master/resources/cpc-vision.png)
+![cpc explanation](https://raw.githubusercontent.com/flrngel/cpc-tensorflow/master/resources/cpc-explanation1.png)
+
+
 ## Status
 
-training code is very messy right now. there is hard codes.. WIP
-
-I just tested vision part but `model.py` is intend to adopt various domain.
+`model.py` is intend to adopt various domain.
 
 ## References
 - [davidtellez/contrastive-predictive-coding](https://github.com/davidtellez/contrastive-predictive-coding)
+  - davidtellez used sequence generator to make sequential cpc
