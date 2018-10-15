@@ -1,6 +1,7 @@
 # CPC-Tensorflow (Contrastive Predictive Coding)
 
 ![cpc vision model](https://raw.githubusercontent.com/flrngel/cpc-tensorflow/master/resources/cpc-vision.png)
+![cpc explanation](https://raw.githubusercontent.com/flrngel/cpc-tensorflow/master/resources/cpc-explanation1.png)
 
 Tensorflow implementation of **Representation Learning with Contrastive Predictive Coding**
 
