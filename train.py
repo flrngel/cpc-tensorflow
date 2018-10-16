@@ -28,7 +28,6 @@ def image_preprocess(x):
         for j in range(7):
             arr.append(x[:, i*32:i*32+64, j*32:j*32+64, :])
     x = tf.concat(arr, axis=0)
-    #x = tf.image.resize_images(x, (224, 224))
     return x
 
 def chunks(l, n):
@@ -68,7 +67,6 @@ for i in range(batch_size):
         tmp.append(X[i][j])
 X = tf.stack(tmp, 0)
 batch_size *= n
-#X = tf.reshape(X, shape=[batch_size, 7, 1024])
 
 # for random row
 nl = []
@@ -93,13 +91,9 @@ for i in range(batch_size):
         Y.append(tf.expand_dims(tf.gather(features[int(i/n)], nrri[i])[:, i%n, :], axis=0))
 
 Y = tf.concat(Y, axis=0)
-print(Y)
 Y_label = tf.constant(Y_label, dtype=np.float32)
 
 nr = tf.random_shuffle(tf.constant(list(range(batch_size)), dtype=tf.int32))
-#X = tf.gather(X, nr)
-#Y_label = tf.gather(Y_label, nr)
-#Y = tf.gather(Y, nr)
 
 ## cpc
 X_len = [5] * batch_size
@@ -123,9 +117,8 @@ with tf.Session() as sess:
             try:
                 #print(sess.run([Y_label]))
                 #sess.run([nr, nrr])
-                _, loss, g, gg, _, ggg, gggg = sess.run([train_op, cpc.loss, cpc.c_t_debug, cpc.x_debug, items, cpc.probs2, cpc.cpc])
+                _, loss, _ = sess.run([train_op, cpc.loss, items])
                 if step % 100 == 0:
-                    print(g, gg, gggg)
                     print('loss: ', loss, 'step:', step, '/', total)
                 step += 1
             except tf.errors.OutOfRangeError:
@@ -142,6 +135,7 @@ with tf.Session() as sess:
             labels_onehot = tf.one_hot(labels, depth=10)
             loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=out, labels=labels_onehot))
             train_op = tf.train.AdamOptimizer(learn_rate).minimize(loss, var_list=[tf.trainable_variables(scope='validation')])
+
         i=0
         sess.run(tf.global_variables_initializer())
         sess.run(iterator.initializer)
@@ -151,18 +145,17 @@ with tf.Session() as sess:
         debug = tf.reduce_mean(features)
         while True:
             try:
-                _, _loss, _out, _, _features = sess.run([train_op, loss, out, items, debug], feed_dict={labels: train_labels[i*batch_size:(i+1)*batch_size]})
+                _, _loss, _out, _ = sess.run([train_op, loss, out, items], feed_dict={labels: train_labels[i*batch_size:(i+1)*batch_size]})
                 s += np.sum(np.argmax(_out, axis=1) == train_labels[i*batch_size:(i+1)*batch_size])
-                #print(_features)
                 if i % 100 == 0:
                     print(_loss, s/(batch_size*100))
-                    #print(_features)
                     s=0
                 if i % 1000 == 0:
                     print(np.argmax(_out, axis=1), train_labels[i*batch_size:(i+1)*batch_size])
                 i+=1
                 if len(train_images)//batch_size <= i:
                     i=0
+
             except tf.errors.OutOfRangeError:
                 break
 
