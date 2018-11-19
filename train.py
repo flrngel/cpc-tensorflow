@@ -5,8 +5,8 @@ from model import CPC
 from nets.resnet_v2 import resnet_v2_101 as resnet
 
 tf.app.flags.DEFINE_string('mode', 'train', 'mode')
-tf.app.flags.DEFINE_integer('epochs', 20, 'epochs')
-tf.app.flags.DEFINE_integer('batch_size', 30, 'batch size to train in one step')
+tf.app.flags.DEFINE_integer('epochs', 10, 'epochs')
+tf.app.flags.DEFINE_integer('batch_size', 16, 'batch size to train in one step')
 tf.app.flags.DEFINE_float('learn_rate', 2e-4, 'learn rate for training optimization')
 tf.app.flags.DEFINE_integer('K', 2, 'hyperparameter K')
 
@@ -52,7 +52,7 @@ data = image_preprocess(items)
 
 # build graph
 ## resnet encoding
-_, features = resnet(data)
+_, features = resnet(data, is_training=False)
 features = features['resnet_v2_101/block3']
 
 # mean pooling
